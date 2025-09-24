@@ -2,7 +2,7 @@
 
 const { Driver, Device } = require('homey');
 const { OpenAIApi } = require('openai');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 
 /**
  * This is the driver for chat bot devices that communicate with
@@ -40,9 +40,9 @@ class ChatBotDriver extends Driver {
 
   /**
    * Generates a unique ID for each chatbot device.
-   */
+  */
   _generateUniqueId() {
-    return uuidv4();
+    return randomUUID();
   }
 
   /**

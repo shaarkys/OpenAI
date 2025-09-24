@@ -2,7 +2,7 @@
 
 const { Driver, Device } = require('homey');
 const { OpenAIApi } = require('openai');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID } = require('crypto');
 
 /**
  * This is the driver for completion bot devices that communicate with
@@ -24,9 +24,9 @@ class CompletionBotDriver extends Driver {
 
   /**
    * Generates a unique ID for each completionBot device.
-   */
+  */
   _generateUniqueId() {
-    return uuidv4();
+    return randomUUID();
   }
 
   /**
