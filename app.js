@@ -14,6 +14,39 @@ const INTERFACE = {
   COMPLETION: 1,
   CHAT: 2,
 };
+const LEGACY_COMPLETION_MAX_TOKENS = 200;
+const LEGACY_CHAT_MAX_TOKENS = 200;
+const DEFAULT_GPT5_MAX_COMPLETION_TOKENS = 2048;
+const MIN_GPT5_MAX_COMPLETION_TOKENS = 1024;
+const MAX_GPT5_MAX_COMPLETION_TOKENS = 8192;
+const CHEAP_MODELS = [
+  'gpt-5-nano',
+  'gpt-5-mini',
+  'gpt-4.1-mini',
+  'gpt-4o-mini',
+  'gpt-4.1-nano',
+  'gpt-5',
+  'gpt-5-chat-latest',
+];
+const DEFAULT_ENGINE = CHEAP_MODELS[0];
+const GPT5_MODELS = new Set([
+  'gpt-5',
+  'gpt-5-mini',
+  'gpt-5-nano',
+  'gpt-5-chat-latest',
+]);
+const LEGACY_CHAT_MODELS = new Set([
+  'gpt-4',
+  'gpt-4o',
+  'gpt-4o-mini',
+  'gpt-4-32k',
+  'gpt-4-turbo',
+  'gpt-4-turbo-preview',
+  'gpt-3.5-turbo',
+]);
+const COMPLETION_MODELS = new Set([
+  'gpt-3.5-turbo-instruct',
+]);
 const HTTP_STATUS = {
   RATE_LIMIT: 429,
   BAD_REQUEST: 400,
@@ -37,9 +70,9 @@ class OpenAIApp extends Homey.App {
     }
 
     this.engine = this.homey.settings.get('engine');
-    if (this.engine === null) {
-      this.log('First time running so setting default engine');
-      this.engine = 'gpt-3.5-turbo';
+    if (!CHEAP_MODELS.includes(this.engine)) {
+      this.log('Using default low-cost engine for showcase');
+      this.engine = DEFAULT_ENGINE;
       this.homey.settings.set('engine', this.engine);
     }
     this.interface = this.checkInterface(this.engine);
@@ -93,6 +126,13 @@ class OpenAIApp extends Homey.App {
       this.homey.settings.set('split', this.split);
     }
 
+    this.gpt5MaxCompletionTokens = this._normalizeGpt5MaxTokens(
+      this.homey.settings.get('gpt5MaxCompletionTokens'),
+    );
+    if (this.homey.settings.get('gpt5MaxCompletionTokens') !== this.gpt5MaxCompletionTokens) {
+      this.homey.settings.set('gpt5MaxCompletionTokens', this.gpt5MaxCompletionTokens);
+    }
+
     this.homey.settings.on('set', (setting) => {
       if (setting === 'APIKey') {
         delete this.openai;
@@ -100,7 +140,11 @@ class OpenAIApp extends Homey.App {
           apiKey: this.homey.settings.get('APIKey'),
         });
       }
-      this.engine = this.homey.settings.get('engine');
+      const engine = this.homey.settings.get('engine');
+      this.engine = CHEAP_MODELS.includes(engine) ? engine : DEFAULT_ENGINE;
+      if (this.engine !== engine) {
+        this.homey.settings.set('engine', this.engine);
+      }
       this.imageEngine = this.homey.settings.get('imageEngine');
       this.imageQuality = this.homey.settings.get('imageQuality');
       this.interface = this.checkInterface(this.engine);
@@ -109,10 +153,16 @@ class OpenAIApp extends Homey.App {
       this.temperature = this.homey.settings.get('temperature');
       this.prefix = this.homey.settings.get('prefix');
       this.split = this.homey.settings.get('split');
+      this.gpt5MaxCompletionTokens = this._normalizeGpt5MaxTokens(
+        this.homey.settings.get('gpt5MaxCompletionTokens'),
+      );
+      if (this.homey.settings.get('gpt5MaxCompletionTokens') !== this.gpt5MaxCompletionTokens) {
+        this.homey.settings.set('gpt5MaxCompletionTokens', this.gpt5MaxCompletionTokens);
+      }
     });
 
     this.prompt = this.prefix;
-    this.chat = [{ role: 'user', content: this.prefix }];
+    this.chat = [{ role: 'system', content: this.prefix }];
     this.ongoing = false;
     this.prevTime = new Date();
     this.tokenQueue = [];
@@ -272,20 +322,91 @@ class OpenAIApp extends Homey.App {
   }
 
   checkInterface() {
-    switch (this.engine) {
-      case 'gpt-4':
-      case 'gpt-4o':
-      case 'gpt-4o-mini':
-      case 'gpt-4-32k':
-      case 'gpt-4-turbo':
-      case 'gpt-4-turbo-preview':
-      case 'gpt-3.5-turbo':
-        this.log(`Interface engine: ${this.engine}`);
-        return INTERFACE.CHAT;
-      case 'gpt-3.5-turbo-instruct':
-      default:
-        this.log(`Completion engine: ${this.engine}`);
-        return INTERFACE.COMPLETION;
+    if (COMPLETION_MODELS.has(this.engine)) {
+      this.log(`Completion engine: ${this.engine}`);
+      return INTERFACE.COMPLETION;
+    }
+
+    this.log(`Interface engine: ${this.engine}`);
+    return INTERFACE.CHAT;
+  }
+
+  _normalizeGpt5MaxTokens(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return DEFAULT_GPT5_MAX_COMPLETION_TOKENS;
+    }
+
+    const clamped = Math.min(
+      MAX_GPT5_MAX_COMPLETION_TOKENS,
+      Math.max(MIN_GPT5_MAX_COMPLETION_TOKENS, Math.floor(parsed)),
+    );
+    return clamped;
+  }
+
+  extractResponseText(response) {
+    if (!response) {
+      return '';
+    }
+
+    if (typeof response.output_text === 'string' && response.output_text.trim()) {
+      return response.output_text.trim();
+    }
+
+    if (Array.isArray(response.output)) {
+      const parts = [];
+      for (const block of response.output) {
+        if (!block) continue;
+        if (typeof block.text === 'string') {
+          parts.push(block.text);
+          continue;
+        }
+        if (Array.isArray(block.content)) {
+          for (const contentItem of block.content) {
+            if (contentItem && typeof contentItem.text === 'string') {
+              parts.push(contentItem.text);
+            }
+          }
+        }
+      }
+      if (parts.length) {
+        return parts.join('');
+      }
+    }
+
+    if (response.choices && response.choices[0]) {
+      const choice = response.choices[0];
+      if (choice && choice.message) {
+        const content = choice.message.content;
+        if (typeof content === 'string') {
+          return content;
+        }
+        if (Array.isArray(content)) {
+          return content.map((item) => {
+            if (typeof item === 'string') return item;
+            if (item && typeof item.text === 'string') return item.text;
+            return '';
+          }).join('');
+        }
+      }
+      if (typeof choice.text === 'string') {
+        return choice.text;
+      }
+    }
+
+    return '';
+  }
+
+  logLargeObject(prefix, object) {
+    try {
+      const json = JSON.stringify(object);
+      const chunkSize = 900;
+      for (let idx = 0; idx < json.length; idx += chunkSize) {
+        const chunk = json.substring(idx, idx + chunkSize);
+        this.log(`${prefix}${idx === 0 ? '' : ` (chunk ${Math.floor(idx / chunkSize) + 1})`}: ${chunk}`);
+      }
+    } catch (err) {
+      this.log(`${prefix}: [unserializable object: ${err}]`);
     }
   }
 
@@ -298,6 +419,17 @@ class OpenAIApp extends Homey.App {
     let pendingText = '';
     let lengthExceeded = false;
     let timeExceeded = false;
+    const isGPT5Engine = GPT5_MODELS.has(this.engine);
+    if (isGPT5Engine && +this.temperature !== 1) {
+      this.log('GPT-5 engines only support default temperature; reverting to 1');
+      this.temperature = 1;
+      try {
+        this.homey.settings.set('temperature', this.temperature);
+      } catch (err) {
+        this.log(`Unable to persist temperature override: ${err}`);
+      }
+    }
+    const effectiveTemperature = isGPT5Engine ? 1 : +this.temperature;
     try {
       if (!(question.endsWith('.')
         || question.endsWith('?')
@@ -309,7 +441,7 @@ class OpenAIApp extends Homey.App {
         // Forget the conversation after 10 minutes
         this.log('Forgetting the conversation');
         this.prompt = this.prefix;
-        this.chat = [{ role: 'user', content: this.prefix }];
+        this.chat = [{ role: 'system', content: this.prefix }];
         this.canSendToken = true;
         this.tokenQueue = [];
       }
@@ -331,26 +463,114 @@ class OpenAIApp extends Homey.App {
         this.__input = this.prompt + pendingText;
         let responseText;
         let completion;
+        let finishReason = 'stop';
         if (this.interface === INTERFACE.COMPLETION) {
-          completion = await this.openai.completions.create({
+          const completionRequest = {
             model: this.engine,
             prompt: this.__input,
-            temperature: +this.temperature,
             user: this.randomName,
-            max_tokens: 200,
-          });
+            temperature: effectiveTemperature,
+          };
+          completionRequest.max_tokens = LEGACY_COMPLETION_MAX_TOKENS;
+
+          this.log(`Calling completions.create with model=${completionRequest.model}, temp=${completionRequest.temperature}, tokens=${completionRequest.max_tokens}, promptLength=${completionRequest.prompt?.length ?? 0}`);
+
+          completion = await this.openai.completions.create(completionRequest);
           responseText = completion.choices[0].text;
+          this.log(`Completions response finish_reason=${completion.choices[0].finish_reason}, textLength=${responseText?.length ?? 0}`);
+          finishReason = completion.choices[0].finish_reason;
         } else { // this.interface === INTERFACE.CHAT
-          completion = await this.openai.chat.completions.create({
-            model: this.engine,
-            messages: this.chat,
-            temperature: +this.temperature,
-            user: this.randomName,
-            max_tokens: 200,
+          const requestMessages = this.chat.map(({ role, content }) => {
+            if (isGPT5Engine) {
+              const text = (typeof content === 'string') ? content : JSON.stringify(content);
+              return {
+                role,
+                content: [
+                  {
+                    type: 'text',
+                    text,
+                  },
+                ],
+              };
+            }
+
+            return { role, content };
           });
-          const answer = completion.choices[0].message;
-          this.chat.push(answer);
-          responseText = answer.content;
+          const completionParams = {
+            model: this.engine,
+            messages: requestMessages,
+            user: this.randomName,
+            temperature: effectiveTemperature,
+          };
+          if (isGPT5Engine) {
+            completionParams.max_completion_tokens = this.gpt5MaxCompletionTokens;
+          } else {
+            completionParams.max_tokens = LEGACY_CHAT_MAX_TOKENS;
+          }
+
+          this.log(`Calling chat.completions.create with model=${completionParams.model}, temp=${completionParams.temperature}, maxTokens=${completionParams.max_tokens ?? completionParams.max_completion_tokens}, messages=${completionParams.messages.length}`);
+
+          try {
+            const payloadPreview = JSON.stringify({
+              model: completionParams.model,
+              temperature: completionParams.temperature,
+              max_tokens: completionParams.max_tokens,
+              max_completion_tokens: completionParams.max_completion_tokens,
+              messages: completionParams.messages.map((msg) => ({
+                role: msg.role,
+                content: Array.isArray(msg.content)
+                  ? msg.content.map((part) => ({
+                    type: part.type,
+                    text: typeof part.text === 'string' ? part.text.slice(0, 200) : part.text,
+                  }))
+                  : (typeof msg.content === 'string' ? msg.content.slice(0, 200) : msg.content),
+              })),
+            });
+            this.log(`chat.completions payload preview: ${payloadPreview}`);
+          } catch (err) {
+            this.log(`Unable to serialize chat.completions payload: ${err}`);
+          }
+
+          if (this.chat.length > 0) {
+            const lastUserMessage = [...this.chat].reverse().find((msg) => msg.role === 'user');
+            if (lastUserMessage) {
+              this.log(`Last user message length=${lastUserMessage.content.length}`);
+            }
+          }
+
+          completion = await this.openai.chat.completions.create(completionParams);
+          const choice = completion.choices[0];
+          if (choice?.message) {
+            if (isGPT5Engine && Array.isArray(choice.message.content)) {
+              responseText = choice.message.content
+                .map((part) => {
+                  if (typeof part === 'string') return part;
+                  if (part && typeof part.text === 'string') return part.text;
+                  return '';
+                })
+                .join('');
+            } else if (typeof choice.message.content === 'string') {
+              responseText = choice.message.content;
+            }
+          }
+          if (!responseText && choice && typeof choice.text === 'string') {
+            responseText = choice.text;
+          }
+          if (!responseText) {
+            this.logLargeObject('Chat completion raw choice', choice);
+          }
+          if (!responseText) {
+            if (isGPT5Engine) {
+              throw new Error('GPT-5 returned no assistant content before hitting the token limit');
+            }
+          }
+          const assistantText = responseText || '';
+          if (assistantText) {
+            const answerRole = choice?.message?.role || 'assistant';
+            this.chat.push({ role: answerRole, content: assistantText });
+          }
+          this.log(`Chat completion finish_reason=${completion.choices[0].finish_reason}, contentLength=${responseText?.length ?? 0}`);
+          finishReason = completion.choices[0].finish_reason;
         }
 
         now = new Date();
@@ -362,7 +582,7 @@ class OpenAIApp extends Homey.App {
         if (lengthExceeded) response += '. Aborted, length exceeded.';
         timeExceeded = lapsedTime > this.maxWait;
         if (timeExceeded) response += '. Aborted, time exceeded.';
-        finished = (completion.choices[0].finish_reason !== 'length') // === 'stop'
+        finished = (finishReason !== 'length')
           || lengthExceeded
           || timeExceeded;
         let splitPos = -1;

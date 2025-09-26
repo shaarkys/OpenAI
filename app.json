@@ -484,12 +484,18 @@
               "label": {
                 "en": "Model"
               },
-              "value": "gpt-3.5-turbo",
+              "value": "gpt-5-nano",
               "values": [
                 {
-                  "id": "gpt-4o",
+                  "id": "gpt-5-nano",
                   "label": {
-                    "en": "gpt-4o"
+                    "en": "gpt-5-nano"
+                  }
+                },
+                {
+                  "id": "gpt-4.1-nano",
+                  "label": {
+                    "en": "gpt-4.1-nano"
                   }
                 },
                 {
@@ -499,27 +505,45 @@
                   }
                 },
                 {
-                  "id": "gpt-4",
+                  "id": "gpt-5-mini",
                   "label": {
-                    "en": "gpt-4"
+                    "en": "gpt-5-mini"
                   }
                 },
                 {
-                  "id": "gpt-4-turbo",
+                  "id": "gpt-4.1-mini",
                   "label": {
-                    "en": "gpt-4-turbo"
+                    "en": "gpt-4.1-mini"
                   }
                 },
                 {
-                  "id": "gpt-4-turbo-preview",
+                  "id": "o4-mini",
                   "label": {
-                    "en": "gpt-4-turbo-preview"
+                    "en": "o4-mini"
                   }
                 },
                 {
-                  "id": "gpt-3.5-turbo",
+                  "id": "o3-mini",
                   "label": {
-                    "en": "gpt-3.5-turbo"
+                    "en": "o3-mini"
+                  }
+                },
+                {
+                  "id": "o1-mini",
+                  "label": {
+                    "en": "o1-mini"
+                  }
+                },
+                {
+                  "id": "gpt-5",
+                  "label": {
+                    "en": "gpt-5"
+                  }
+                },
+                {
+                  "id": "gpt-5-chat-latest",
+                  "label": {
+                    "en": "gpt-5-chat-latest"
                   }
                 }
               ]

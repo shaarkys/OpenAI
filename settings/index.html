@@ -162,18 +162,19 @@
 
       <div class="homey-form-group">
         <label class="homey-form-label" for="engine"><span data-i18n="settings.engine">engine</span> <div class="hintButton" onclick="toggle(this,'engineHint');return false;">i</div></label>
-        <!-- See https://platform.openai.com/docs/models/model-endpoint-compatibility for engines -->
+        <!-- See https://platform.openai.com/docs/models for available engines -->
         <select class="homey-form-select" id="engine">
-          <!-- The ones below are for createChatCompletion -->
-          <option value="gpt-4">GPT-4</option>
-          <option value="gpt-4o">GPT-4o</option>
-          <option value="gpt-4o-mini">GPT-4o-mini</option>
-          <option value="gpt-4-turbo">GPT-4-turbo</option>
-          <option value="gpt-4-32k">GPT-4-32k (Restricted access)</option>
-          <option value="gpt-4-turbo-preview">GPT-4-turbo-preview (Restricted access)</option>
-          <option value="gpt-3.5-turbo" selected>GPT-3.5-turbo</option>
-          <!-- The ones below are for createCompletion -->
-          <option value="gpt-3.5-turbo-instruct">GPT-3.5-turbo-instruct</option>
+          <!-- Curated low-cost models for showcase -->
+          <option value="gpt-5-nano" selected>gpt-5-nano</option>
+          <option value="gpt-4.1-nano">gpt-4.1-nano</option>
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="gpt-5-mini">gpt-5-mini</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="o4-mini">o4-mini</option>
+          <option value="o3-mini">o3-mini</option>
+          <option value="o1-mini">o1-mini</option>
+          <option value="gpt-5">gpt-5</option>
+          <option value="gpt-5-chat-latest">gpt-5-chat-latest</option>
         </select>
         <p class="hint" id="engineHint" data-i18n="settings.engineHelp" class="homey-form-label">settings.engineHelp</p>
       </div>
@@ -203,6 +204,12 @@
         <input class="homey-form-input" id="temperature" type="number" value="0.6" min="0" max="1" step="0.01" onchange="limitElement(this);"/>
       </div>
       <p class="hint" id="temperatureHint" data-i18n="settings.temperatureHelp" class="homey-form-label">settings.temperatureHelp</p>
+
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="gpt5MaxTokens">GPT-5 max completion tokens <div class="hintButton" onclick="toggle(this,'gpt5MaxTokensHint');return false;">i</div></label>
+        <input class="homey-form-input" id="gpt5MaxTokens" type="number" value="2048" min="1024" max="8192" step="128" onchange="limitElement(this);"/>
+        <p class="hint" id="gpt5MaxTokensHint">Default is 2048. Larger values give GPT-5 models room to finish responses but increase cost because they can spend more reasoning tokens.</p>
+      </div>
     </fieldset>
 
     <fieldset class="homey-form-fieldset">
@@ -356,6 +363,7 @@
         var temperatureElement = document.getElementById("temperature");
         var prefixElement = document.getElementById("prefix");
         var splitElement = document.getElementById("split");
+        var gpt5MaxTokensElement = document.getElementById("gpt5MaxTokens");
         var saveElement = document.getElementById("save");
         var refreshElement = document.getElementById("refresh");
         var webhookElement = document.getElementById("webhook")
@@ -405,6 +413,11 @@
           splitElement.value = split;
         });
 
+        Homey.get("gpt5MaxCompletionTokens", function (err, gpt5MaxTokens) {
+          if (err) return Homey.alert(err);
+          gpt5MaxTokensElement.value = gpt5MaxTokens || 2048;
+        });
+
         Homey.get("webhook", function (err, webhook) {
           if (err) return Homey.alert(err);
           webhookElement.value = webhook;
@@ -436,6 +449,9 @@
             if (err) return Homey.alert(err);
           });
           Homey.set("split", splitElement.value, function (err) {
+            if (err) return Homey.alert(err);
+          });
+          Homey.set("gpt5MaxCompletionTokens", gpt5MaxTokensElement.value, function (err) {
             if (err) return Homey.alert(err);
           });
         });
