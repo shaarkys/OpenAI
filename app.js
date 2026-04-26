@@ -21,28 +21,25 @@ const MIN_GPT5_MAX_COMPLETION_TOKENS = 1024;
 const MAX_GPT5_MAX_COMPLETION_TOKENS = 8192;
 const CHEAP_MODELS = [
   'gpt-5-nano',
+  'gpt-5.4-nano',
   'gpt-5-mini',
+  'gpt-5.4-mini',
   'gpt-4.1-mini',
   'gpt-4o-mini',
   'gpt-4.1-nano',
   'gpt-5',
+  'gpt-5.5',
   'gpt-5-chat-latest',
 ];
 const DEFAULT_ENGINE = CHEAP_MODELS[0];
 const GPT5_MODELS = new Set([
   'gpt-5',
+  'gpt-5.5',
+  'gpt-5.4-mini',
+  'gpt-5.4-nano',
   'gpt-5-mini',
   'gpt-5-nano',
   'gpt-5-chat-latest',
-]);
-const LEGACY_CHAT_MODELS = new Set([
-  'gpt-4',
-  'gpt-4o',
-  'gpt-4o-mini',
-  'gpt-4-32k',
-  'gpt-4-turbo',
-  'gpt-4-turbo-preview',
-  'gpt-3.5-turbo',
 ]);
 const COMPLETION_MODELS = new Set([
   'gpt-3.5-turbo-instruct',
