@@ -13,7 +13,7 @@ You must always respect Homey SDK 3 - https://apps.developer.homey.app/ and APP 
   - `/drivers`
   - `/capabilities`
   - `/flow`
-- `/.homeybuild`: generated build output; do not edit
+- `/.homeybuild`: generated build output; do not edit, no need to analyse as this is serving code prior to the Homey app instalation
 - `/drivers/<driver_id>`: driver and device code plus pairing views
   - `driver.js`, `device.js`, `assets/`, `pair/`
 - `/lib`: shared modules and helpers
@@ -43,11 +43,16 @@ You must always respect Homey SDK 3 - https://apps.developer.homey.app/ and APP 
 
 ## Testing Requirements for OpenAI Codex
 
-OpenAI Codex should not run any tests.
+OpenAI Codex may run safe local verification commands after changes:
+- `node --check` on modified JavaScript files
+- `homey app validate`
+- configured lint commands on changed files
+
+OpenAI Codex must not run integration tests, device communication tests, or destructive commands unless explicitly requested.
 
 ## Pull Request Guidelines for OpenAI Codex
 
-OpenAI Codex should not submit any pull request or make GitHub modifications.
+OpenAI Codex should not submit any pull request or make GitHub modifications unless explicitely requested.
 
 ## Programmatic Checks for OpenAI Codex
 
