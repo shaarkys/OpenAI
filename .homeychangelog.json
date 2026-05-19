@@ -91,5 +91,8 @@
   },
   "1.6.5": {
     "en": "Added gpt-4o-mini support (Thanks to Pim Louwers)"
+  },
+  "1.6.6": {
+    "en": "Added optional image tag support to ChatGPT question flow cards, enabling camera snapshots and other Homey image tokens to be sent with prompts."
   }
 }

@@ -172,12 +172,12 @@ class OpenAIApp extends Homey.App {
     // Simple flows flowcard
     const askQuestionActionSimple = this.homey.flow.getActionCard('ask-chatgpt-a-question-simple');
     askQuestionActionSimple.registerRunListener(async (args, state) => {
-      await this.askQuestion(args.Question);
+      await this.askQuestion(args.Question, args.droptoken);
     });
 
     // Advanced flow flowcard
     const askQuestionActionAdvanced = this.homey.flow.getActionCard('ask-chatgpt-a-question-advanced');
-    askQuestionActionAdvanced.registerRunListener(async (args, state) => this.askQuestion(args.Question));
+    askQuestionActionAdvanced.registerRunListener(async (args, state) => this.askQuestion(args.Question, args.droptoken));
 
     // Generate Image flowcard
     const generateImageAction = this.homey.flow.getActionCard('generate-an-image');
@@ -407,7 +407,65 @@ class OpenAIApp extends Homey.App {
     }
   }
 
-  async askQuestion(question) {
+  async imageToDataUrl(image) {
+    const imageStream = await image.getStream();
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      imageStream.on('data', (chunk) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      imageStream.once('error', reject);
+      imageStream.once('end', resolve);
+    });
+
+    const metadata = imageStream.meta || {};
+    const contentType = metadata.contentType || imageStream.contentType || 'image/jpeg';
+    return `data:${contentType};base64,${Buffer.concat(chunks).toString('base64')}`;
+  }
+
+  createUserMessageContent(question, imageUrl) {
+    if (!imageUrl) {
+      return question;
+    }
+
+    return [
+      {
+        type: 'text',
+        text: question,
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: imageUrl,
+        },
+      },
+    ];
+  }
+
+  createRequestMessageContent(content, isGPT5Engine) {
+    if (Array.isArray(content)) {
+      return content;
+    }
+
+    if (isGPT5Engine) {
+      return [
+        {
+          type: 'text',
+          text: content,
+        },
+      ];
+    }
+
+    return content;
+  }
+
+  trimChatHistory() {
+    while (JSON.stringify(this.chat).length > this.maxLength && this.chat.length > 2) {
+      this.chat.splice(1, 1);
+    }
+  }
+
+  async askQuestion(question, image) {
     if (this.ongoing) {
       throw new Error('Still working on previous request');
     }
@@ -428,11 +486,15 @@ class OpenAIApp extends Homey.App {
     }
     const effectiveTemperature = isGPT5Engine ? 1 : +this.temperature;
     try {
+      if (image && this.interface === INTERFACE.COMPLETION) {
+        throw new Error('The selected OpenAI model does not support image input');
+      }
       if (!(question.endsWith('.')
         || question.endsWith('?')
         || question.endsWith('!'))) {
         question += '.';
       }
+      const imageUrl = image ? await this.imageToDataUrl(image) : undefined;
       let now = new Date();
       if (now - this.prevTime > (1000 * 60 * 10)) {
         // Forget the conversation after 10 minutes
@@ -444,13 +506,12 @@ class OpenAIApp extends Homey.App {
       }
       this.prevTime = now;
       this.prompt += ` ${question}`; // Add space because ChatGpt may have missed one.
-      this.chat.push({ role: 'user', content: question });
+      this.chat.push({ role: 'user', content: this.createUserMessageContent(question, imageUrl) });
+      this.trimChatHistory();
       if (this.prompt.length > this.maxLength) {
         this.log(`Forgetting what was before ${this.maxLength} characters ago`);
         this.prompt = this.prompt.substr(-(this.maxLength - pendingText.length));
-        while (JSON.stringify(this.chat).length > this.maxLength) {
-          this.chat.shift();
-        }
+        this.trimChatHistory();
       }
       let finished = false;
       const startTime = new Date(now.getTime() - 1000 * 2);
@@ -478,20 +539,7 @@ class OpenAIApp extends Homey.App {
           finishReason = completion.choices[0].finish_reason;
         } else { // this.interface === INTERFACE.CHAT
           const requestMessages = this.chat.map(({ role, content }) => {
-            if (isGPT5Engine) {
-              const text = (typeof content === 'string') ? content : JSON.stringify(content);
-              return {
-                role,
-                content: [
-                  {
-                    type: 'text',
-                    text,
-                  },
-                ],
-              };
-            }
-
-            return { role, content };
+            return { role, content: this.createRequestMessageContent(content, isGPT5Engine) };
           });
           const completionParams = {
             model: this.engine,
@@ -519,6 +567,7 @@ class OpenAIApp extends Homey.App {
                   ? msg.content.map((part) => ({
                     type: part.type,
                     text: typeof part.text === 'string' ? part.text.slice(0, 200) : part.text,
+                    image_url: part.image_url ? { url: '[image]' } : undefined,
                   }))
                   : (typeof msg.content === 'string' ? msg.content.slice(0, 200) : msg.content),
               })),
@@ -531,7 +580,10 @@ class OpenAIApp extends Homey.App {
           if (this.chat.length > 0) {
             const lastUserMessage = [...this.chat].reverse().find((msg) => msg.role === 'user');
             if (lastUserMessage) {
-              this.log(`Last user message length=${lastUserMessage.content.length}`);
+              const lastUserMessageLength = typeof lastUserMessage.content === 'string'
+                ? lastUserMessage.content.length
+                : JSON.stringify(lastUserMessage.content).length;
+              this.log(`Last user message length=${lastUserMessageLength}`);
             }
           }
 
