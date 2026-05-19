@@ -4,16 +4,13 @@
     "no": "Spør ChatGPT et spørsmål og _VENT_ på hele svaret (returnerer: tekst)"
   },
   "titleFormatted": {
-    "en": "Ask ChatGPT the question [[Question]] with optional image [[droptoken]] and _WAIT_ for the full answer",
-    "no": "Spør ChatGPT spørsmålet [[Question]] med valgfritt bilde [[droptoken]] og _VENT_ på hele svaret"
+    "en": "Ask ChatGPT the question [[Question]] and _WAIT_ for the full answer",
+    "no": "Spør ChatGPT spørsmålet [[Question]] og _VENT_ på hele svaret"
   },
   "hint": {
-    "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question provided with this flow card will be sent to ChatGPT for processing. Optionally drop an image tag, for example from a camera snapshot, to include it with the question. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
-    "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Du kan eventuelt slippe en bilde-tagg, for eksempel fra et kamerabilde, for å sende det sammen med spørsmålet. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
+    "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question provided with this flow card will be sent to ChatGPT for processing. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
+    "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
   },
-  "droptoken": [
-    "image"
-  ],
   "args": [
     {
       "type": "text",

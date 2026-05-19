@@ -1,0 +1,45 @@
+{
+  "title": {
+    "en": "Ask ChatGPT a question with an image and _WAIT_ for the full answer (returns: string)",
+    "no": "Spør ChatGPT et spørsmål med et bilde og _VENT_ på hele svaret (returnerer: tekst)"
+  },
+  "titleFormatted": {
+    "en": "Ask ChatGPT the question [[Question]] with image [[droptoken]] and _WAIT_ for the full answer",
+    "no": "Spør ChatGPT spørsmålet [[Question]] med bilde [[droptoken]] og _VENT_ på hele svaret"
+  },
+  "hint": {
+    "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question and image tag provided with this flow card will be sent to ChatGPT for processing. Use this card for camera snapshots and other Homey image tags. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
+    "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet og bilde-taggen som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Bruk dette kortet for kamerabilder og andre Homey bilde-tagger. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
+  },
+  "droptoken": [
+    "image"
+  ],
+  "args": [
+    {
+      "type": "text",
+      "name": "Question",
+      "title": {
+        "en": "Question to ask ChatGPT",
+        "no": "Spørsmål å spille ChatGPT"
+      },
+      "placeholder": {
+        "en": "question",
+        "no": "spørsmål"
+      }
+    }
+  ],
+  "tokens": [
+    {
+      "name": "ChatGPT_FullResponse",
+      "type": "string",
+      "title": {
+        "en": "ChatGPT Full Response",
+        "no": "ChatGPT Fullt svar"
+      },
+      "example": {
+        "en": "I can answer all your questions",
+        "no": "Jeg kan svaret på alle dine spørsmål"
+      }
+    }
+  ]
+}

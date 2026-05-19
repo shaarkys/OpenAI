@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.openai.ChatGPT",
-  "version": "1.6.6",
+  "version": "1.6.7",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -191,16 +191,13 @@
           "no": "Spør ChatGPT et spørsmål og _VENT_ på hele svaret (returnerer: tekst)"
         },
         "titleFormatted": {
-          "en": "Ask ChatGPT the question [[Question]] with optional image [[droptoken]] and _WAIT_ for the full answer",
-          "no": "Spør ChatGPT spørsmålet [[Question]] med valgfritt bilde [[droptoken]] og _VENT_ på hele svaret"
+          "en": "Ask ChatGPT the question [[Question]] and _WAIT_ for the full answer",
+          "no": "Spør ChatGPT spørsmålet [[Question]] og _VENT_ på hele svaret"
         },
         "hint": {
-          "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question provided with this flow card will be sent to ChatGPT for processing. Optionally drop an image tag, for example from a camera snapshot, to include it with the question. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
-          "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Du kan eventuelt slippe en bilde-tagg, for eksempel fra et kamerabilde, for å sende det sammen med spørsmålet. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
+          "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question provided with this flow card will be sent to ChatGPT for processing. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
+          "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
         },
-        "droptoken": [
-          "image"
-        ],
         "args": [
           {
             "type": "text",
@@ -237,14 +234,43 @@
           "no": "Spør ChatGPT et spørsmål og utløs delsvar"
         },
         "titleFormatted": {
-          "en": "Ask ChatGPT the question [[Question]] with optional image [[droptoken]] and trigger partial responses",
-          "no": "Spør ChatGPT spørsmålet [[Question]] med valgfritt bilde [[droptoken]] og utløs delsvar"
+          "en": "Ask ChatGPT the question [[Question]] and trigger partial responses",
+          "no": "Spør ChatGPT spørsmålet [[Question]] og utløs delsvar"
         },
         "hint": {
-          "en": "The question provided with this flow card will be sent to ChatGPT for processing. Optionally drop an image tag, for example from a camera snapshot, to include it with the question. A trigger card is then triggered once the first partial answer arrive. Then when you have finished processing the partial response, you need to tell ChatGPT to send the next partial answer to trigger the next partial answer.",
-          "no": "Spørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Du kan eventuelt slippe en bilde-tagg, for eksempel fra et kamerabilde, for å sende det sammen med spørsmålet. Et triggerkort utløses så når det første delsvaret kommer. Når du er ferdig med å behandle det delsvaret må du fortelle ChatGPT at den må sende det neste delsvaret for å utløse det neste delsvaret."
+          "en": "The question provided with this flow card will be sent to ChatGPT for processing. A trigger card is then triggered once the first partial answer arrive. Then when you have finished processing the partial response, you need to tell ChatGPT to send the next partial answer to trigger the next partial answer.",
+          "no": "Spørsmålet som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Et triggerkort utløses så når det første delsvaret kommer. Når du er ferdig med å behandle det delsvaret må du fortelle ChatGPT at den må sende det neste delsvaret for å utløse det neste delsvaret."
         },
         "highlight": true,
+        "args": [
+          {
+            "type": "text",
+            "name": "Question",
+            "title": {
+              "en": "Question to ask ChatGPT",
+              "no": "Spørsmål å spille ChatGPT"
+            },
+            "placeholder": {
+              "en": "question",
+              "no": "spørsmål"
+            }
+          }
+        ],
+        "id": "ask-chatgpt-a-question-simple"
+      },
+      {
+        "title": {
+          "en": "Ask ChatGPT a question with an image and _WAIT_ for the full answer (returns: string)",
+          "no": "Spør ChatGPT et spørsmål med et bilde og _VENT_ på hele svaret (returnerer: tekst)"
+        },
+        "titleFormatted": {
+          "en": "Ask ChatGPT the question [[Question]] with image [[droptoken]] and _WAIT_ for the full answer",
+          "no": "Spør ChatGPT spørsmålet [[Question]] med bilde [[droptoken]] og _VENT_ på hele svaret"
+        },
+        "hint": {
+          "en": "This is a very slow operation and should ONLY be used if you don't need a quick response, also the answer is not appropriate for text-to-speech clients who can't handle responses longer than ~200 characters. For this, you should use partial responses instead.\n\nThe question and image tag provided with this flow card will be sent to ChatGPT for processing. Use this card for camera snapshots and other Homey image tags. When completed, the answer will be returned in the text Token {{ChatGPT_FullResponse}}.",
+          "no": "Dette er en veldig treg operasjon og bør KUN brukes hvis du ikke trenger et raskt svar. Svaret er heller ikke egnet for tekst-til-tale-klienter som ikke kan håndtere svar lengre enn ~200 tegn. For dette bør du bruke delvise svar i stedet.\n\nSpørsmålet og bilde-taggen som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Bruk dette kortet for kamerabilder og andre Homey bilde-tagger. Når det er fullført, vil svaret bli returnert i teksten Token {{ChatGPT_FullResponse}}."
+        },
         "droptoken": [
           "image"
         ],
@@ -262,7 +288,53 @@
             }
           }
         ],
-        "id": "ask-chatgpt-a-question-simple"
+        "tokens": [
+          {
+            "name": "ChatGPT_FullResponse",
+            "type": "string",
+            "title": {
+              "en": "ChatGPT Full Response",
+              "no": "ChatGPT Fullt svar"
+            },
+            "example": {
+              "en": "I can answer all your questions",
+              "no": "Jeg kan svaret på alle dine spørsmål"
+            }
+          }
+        ],
+        "id": "ask-chatgpt-a-question-with-image-advanced"
+      },
+      {
+        "title": {
+          "en": "Ask ChatGPT a question with an image and trigger partial responses",
+          "no": "Spør ChatGPT et spørsmål med et bilde og utløs delsvar"
+        },
+        "titleFormatted": {
+          "en": "Ask ChatGPT the question [[Question]] with image [[droptoken]] and trigger partial responses",
+          "no": "Spør ChatGPT spørsmålet [[Question]] med bilde [[droptoken]] og utløs delsvar"
+        },
+        "hint": {
+          "en": "The question and image tag provided with this flow card will be sent to ChatGPT for processing. Use this card for camera snapshots and other Homey image tags. A trigger card is then triggered once the first partial answer arrive. Then when you have finished processing the partial response, you need to tell ChatGPT to send the next partial answer to trigger the next partial answer.",
+          "no": "Spørsmålet og bilde-taggen som følger med dette flytkortet vil bli sendt til ChatGPT for behandling. Bruk dette kortet for kamerabilder og andre Homey bilde-tagger. Et triggerkort utløses så når det første delsvaret kommer. Når du er ferdig med å behandle det delsvaret må du fortelle ChatGPT at den må sende det neste delsvaret for å utløse det neste delsvaret."
+        },
+        "droptoken": [
+          "image"
+        ],
+        "args": [
+          {
+            "type": "text",
+            "name": "Question",
+            "title": {
+              "en": "Question to ask ChatGPT",
+              "no": "Spørsmål å spille ChatGPT"
+            },
+            "placeholder": {
+              "en": "question",
+              "no": "spørsmål"
+            }
+          }
+        ],
+        "id": "ask-chatgpt-a-question-with-image-simple"
       },
       {
         "title": {

@@ -172,12 +172,22 @@ class OpenAIApp extends Homey.App {
     // Simple flows flowcard
     const askQuestionActionSimple = this.homey.flow.getActionCard('ask-chatgpt-a-question-simple');
     askQuestionActionSimple.registerRunListener(async (args, state) => {
-      await this.askQuestion(args.Question, args.droptoken);
+      await this.askQuestion(args.Question);
     });
 
     // Advanced flow flowcard
     const askQuestionActionAdvanced = this.homey.flow.getActionCard('ask-chatgpt-a-question-advanced');
-    askQuestionActionAdvanced.registerRunListener(async (args, state) => this.askQuestion(args.Question, args.droptoken));
+    askQuestionActionAdvanced.registerRunListener(async (args, state) => this.askQuestion(args.Question));
+
+    // Simple image flow flowcard
+    const askQuestionWithImageActionSimple = this.homey.flow.getActionCard('ask-chatgpt-a-question-with-image-simple');
+    askQuestionWithImageActionSimple.registerRunListener(async (args, state) => {
+      await this.askQuestion(args.Question, args.droptoken);
+    });
+
+    // Advanced image flow flowcard
+    const askQuestionWithImageActionAdvanced = this.homey.flow.getActionCard('ask-chatgpt-a-question-with-image-advanced');
+    askQuestionWithImageActionAdvanced.registerRunListener(async (args, state) => this.askQuestion(args.Question, args.droptoken));
 
     // Generate Image flowcard
     const generateImageAction = this.homey.flow.getActionCard('generate-an-image');

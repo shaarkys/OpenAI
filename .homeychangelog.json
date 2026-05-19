@@ -94,5 +94,8 @@
   },
   "1.6.6": {
     "en": "Added optional image tag support to ChatGPT question flow cards, enabling camera snapshots and other Homey image tokens to be sent with prompts."
+  },
+  "1.6.7": {
+    "en": "Moved image tag support to separate ChatGPT flow cards so existing text-only flows remain backwards compatible."
   }
 }
