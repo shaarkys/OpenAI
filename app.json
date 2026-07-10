@@ -562,8 +562,26 @@
               "label": {
                 "en": "Model"
               },
-              "value": "gpt-5-nano",
+              "value": "gpt-5.6-luna",
               "values": [
+                {
+                  "id": "gpt-5.6-luna",
+                  "label": {
+                    "en": "gpt-5.6-luna"
+                  }
+                },
+                {
+                  "id": "gpt-5.6-terra",
+                  "label": {
+                    "en": "gpt-5.6-terra"
+                  }
+                },
+                {
+                  "id": "gpt-5.6-sol",
+                  "label": {
+                    "en": "gpt-5.6-sol"
+                  }
+                },
                 {
                   "id": "gpt-5-nano",
                   "label": {
@@ -646,7 +664,7 @@
                 "en": "Temperature"
               },
               "hint": {
-                "en": "Defines the creativity of the responses. 0.0 is deterministic, 1.0 is the most creative."
+                "en": "Sampling temperature for models that support it. GPT-5 reasoning models use their default temperature."
               },
               "value": 0.7,
               "min": 0,
@@ -661,7 +679,7 @@
               "hint": {
                 "en": "Typically, a conversation is formatted with a system message first. The system message helps set the behavior of the assistant."
               },
-              "value": "You are a helpful assistant."
+              "value": "Answer the user's question directly and helpfully. Keep the response appropriate for a general audience."
             },
             {
               "id": "timeout",

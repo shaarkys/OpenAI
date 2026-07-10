@@ -20,6 +20,9 @@ const DEFAULT_GPT5_MAX_COMPLETION_TOKENS = 2048;
 const MIN_GPT5_MAX_COMPLETION_TOKENS = 1024;
 const MAX_GPT5_MAX_COMPLETION_TOKENS = 8192;
 const CHEAP_MODELS = [
+  'gpt-5.6-luna',
+  'gpt-5.6-terra',
+  'gpt-5.6-sol',
   'gpt-5-nano',
   'gpt-5.4-nano',
   'gpt-5-mini',
@@ -33,6 +36,9 @@ const CHEAP_MODELS = [
 ];
 const DEFAULT_ENGINE = CHEAP_MODELS[0];
 const GPT5_MODELS = new Set([
+  'gpt-5.6-luna',
+  'gpt-5.6-terra',
+  'gpt-5.6-sol',
   'gpt-5',
   'gpt-5.5',
   'gpt-5.4-mini',
@@ -41,6 +47,11 @@ const GPT5_MODELS = new Set([
   'gpt-5-nano',
   'gpt-5-chat-latest',
 ]);
+const GPT56_REASONING_EFFORT = {
+  'gpt-5.6-luna': 'none',
+  'gpt-5.6-terra': 'none',
+  'gpt-5.6-sol': 'medium',
+};
 const COMPLETION_MODELS = new Set([
   'gpt-3.5-turbo-instruct',
 ]);
@@ -485,15 +496,6 @@ class OpenAIApp extends Homey.App {
     let lengthExceeded = false;
     let timeExceeded = false;
     const isGPT5Engine = GPT5_MODELS.has(this.engine);
-    if (isGPT5Engine && +this.temperature !== 1) {
-      this.log('GPT-5 engines only support default temperature; reverting to 1');
-      this.temperature = 1;
-      try {
-        this.homey.settings.set('temperature', this.temperature);
-      } catch (err) {
-        this.log(`Unable to persist temperature override: ${err}`);
-      }
-    }
     const effectiveTemperature = isGPT5Engine ? 1 : +this.temperature;
     try {
       if (image && this.interface === INTERFACE.COMPLETION) {
@@ -554,21 +556,27 @@ class OpenAIApp extends Homey.App {
           const completionParams = {
             model: this.engine,
             messages: requestMessages,
-            user: this.randomName,
-            temperature: effectiveTemperature,
+            safety_identifier: this.randomName,
           };
           if (isGPT5Engine) {
             completionParams.max_completion_tokens = this.gpt5MaxCompletionTokens;
+            if (GPT56_REASONING_EFFORT[this.engine]) {
+              completionParams.reasoning_effort = GPT56_REASONING_EFFORT[this.engine];
+            } else {
+              completionParams.temperature = effectiveTemperature;
+            }
           } else {
             completionParams.max_tokens = LEGACY_CHAT_MAX_TOKENS;
+            completionParams.temperature = effectiveTemperature;
           }
 
-          this.log(`Calling chat.completions.create with model=${completionParams.model}, temp=${completionParams.temperature}, maxTokens=${completionParams.max_tokens ?? completionParams.max_completion_tokens}, messages=${completionParams.messages.length}`);
+          this.log(`Calling chat.completions.create with model=${completionParams.model}, reasoning=${completionParams.reasoning_effort ?? 'default'}, temp=${completionParams.temperature ?? 'default'}, maxTokens=${completionParams.max_tokens ?? completionParams.max_completion_tokens}, messages=${completionParams.messages.length}`);
 
           try {
             const payloadPreview = JSON.stringify({
               model: completionParams.model,
               temperature: completionParams.temperature,
+              reasoning_effort: completionParams.reasoning_effort,
               max_tokens: completionParams.max_tokens,
               max_completion_tokens: completionParams.max_completion_tokens,
               messages: completionParams.messages.map((msg) => ({

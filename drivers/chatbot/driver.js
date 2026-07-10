@@ -4,6 +4,24 @@ const { Driver, Device } = require('homey');
 const { OpenAIApi } = require('openai');
 const { randomUUID } = require('crypto');
 
+const GPT5_MODELS = new Set([
+  'gpt-5.6-luna',
+  'gpt-5.6-terra',
+  'gpt-5.6-sol',
+  'gpt-5',
+  'gpt-5.5',
+  'gpt-5.4-mini',
+  'gpt-5.4-nano',
+  'gpt-5-mini',
+  'gpt-5-nano',
+  'gpt-5-chat-latest',
+]);
+const GPT56_REASONING_EFFORT = {
+  'gpt-5.6-luna': 'none',
+  'gpt-5.6-terra': 'none',
+  'gpt-5.6-sol': 'medium',
+};
+
 /**
  * This is the driver for chat bot devices that communicate with
  * OpenAI APIs to add LLM driven conversation logic for Homey.
@@ -118,14 +136,23 @@ class ChatBotDriver extends Driver {
    */
   async sendChatRequest(chat, settings) {
     try{
-
-      let response = await this.getOpenAI().chat.completions.create({
+      const isGPT5Model = GPT5_MODELS.has(settings.model);
+      const request = {
         model: settings.model,
         messages: chat,
-        temperature: +settings.temperature,
-        max_tokens: +settings.max_tokens,
         response_format: { type: settings.response_format ?? "text" }
-      });
+      };
+      if (isGPT5Model) {
+        request.max_completion_tokens = +settings.max_tokens;
+        if (GPT56_REASONING_EFFORT[settings.model]) {
+          request.reasoning_effort = GPT56_REASONING_EFFORT[settings.model];
+        }
+      } else {
+        request.temperature = +settings.temperature;
+        request.max_tokens = +settings.max_tokens;
+      }
+
+      let response = await this.getOpenAI().chat.completions.create(request);
       
       let finish_reason = response.choices[0].finish_reason;
       if (finish_reason === 'stop') {
