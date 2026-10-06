@@ -1,7 +1,6 @@
 'use strict';
 
 const { Driver, Device } = require('homey');
-const { OpenAIApi } = require('openai');
 const { randomUUID } = require('crypto');
 
 const GPT5_MODELS = new Set([
@@ -20,6 +19,12 @@ const GPT56_REASONING_EFFORT = {
   'gpt-5.6-luna': 'none',
   'gpt-5.6-terra': 'none',
   'gpt-5.6-sol': 'medium',
+};
+const GPT6_REASONING_EFFORT = {
+  'gpt-6-luna': 'none',
+  'gpt-6-sol': 'none',
+  'gpt-6.1-sol': 'medium',
+  'gpt-6-astra': 'medium',
 };
 
 /**
@@ -135,7 +140,29 @@ class ChatBotDriver extends Driver {
    * @returns {Promise<{ completion: string }>} The answer to the question in a completion token.
    */
   async sendChatRequest(chat, settings) {
-    try{
+    try {
+      if (GPT6_REASONING_EFFORT[settings.model]) {
+        const request = {
+          model: settings.model,
+          input: chat,
+          reasoning: { effort: GPT6_REASONING_EFFORT[settings.model] },
+          max_output_tokens: +settings.max_tokens,
+          store: false,
+        };
+        if (settings.response_format === 'json_object') {
+          request.text = { format: { type: 'json_object' } };
+          request.instructions = 'Return a valid JSON object.';
+        }
+        const response = await this.getOpenAI().responses.create(request);
+        if (response.status === 'incomplete') {
+          throw new Error(`OpenAI returned incomplete output: ${response.incomplete_details?.reason || 'unknown reason'}`);
+        }
+        const content = this.homey.app.extractResponseText(response);
+        if (response.status !== 'completed' || !content) {
+          throw new Error(`OpenAI returned ${response.status || 'no'} response without assistant text`);
+        }
+        return { role: 'assistant', content };
+      }
       const isGPT5Model = GPT5_MODELS.has(settings.model);
       const request = {
         model: settings.model,
@@ -171,8 +198,7 @@ class ChatBotDriver extends Driver {
       }
     } catch (e) {
       this.error(e);
-      var error = e.error;
-      throw new Error(error.message);
+      throw e;
     }
   }
 

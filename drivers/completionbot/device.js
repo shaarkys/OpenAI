@@ -8,6 +8,16 @@ class CompletionBot extends Device {
    * onInit is called when the device is initialized.
    */
   async onInit() {
+    const retiredModels = ['gpt-3.5-turbo-instruct', 'davinci-002', 'babbage-002', 'babbage'];
+    if (retiredModels.includes(this.getSetting('model'))) {
+      this.log('Migrating retired CompletionBot model to gpt-6-luna');
+      try {
+        await this.setSettings({ model: 'gpt-6-luna' });
+        this.log('CompletionBot model migration completed');
+      } catch (error) {
+        this.error('CompletionBot model migration failed:', error);
+      }
+    }
     this.log('CompletionBot has been initialized');
   }
 

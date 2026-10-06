@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const { OpenAI } = require('openai');
+const { createHash } = require('crypto');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -21,6 +22,10 @@ const MIN_GPT5_MAX_COMPLETION_TOKENS = 1024;
 const MAX_GPT5_MAX_COMPLETION_TOKENS = 8192;
 const CHEAP_MODELS = [
   'gpt-5.6-luna',
+  'gpt-6-luna',
+  'gpt-6-sol',
+  'gpt-6.1-sol',
+  'gpt-6-astra',
   'gpt-5.6-terra',
   'gpt-5.6-sol',
   'gpt-5-nano',
@@ -47,19 +52,21 @@ const GPT5_MODELS = new Set([
   'gpt-5-nano',
   'gpt-5-chat-latest',
 ]);
+const GPT6_MODELS = new Set(['gpt-6-luna', 'gpt-6-sol', 'gpt-6.1-sol', 'gpt-6-astra']);
 const GPT56_REASONING_EFFORT = {
   'gpt-5.6-luna': 'none',
   'gpt-5.6-terra': 'none',
   'gpt-5.6-sol': 'medium',
 };
+const GPT6_REASONING_EFFORT = {
+  'gpt-6-luna': 'none',
+  'gpt-6-sol': 'none',
+  'gpt-6.1-sol': 'medium',
+  'gpt-6-astra': 'medium',
+};
 const COMPLETION_MODELS = new Set([
   'gpt-3.5-turbo-instruct',
 ]);
-const HTTP_STATUS = {
-  RATE_LIMIT: 429,
-  BAD_REQUEST: 400,
-};
-
 class OpenAIApp extends Homey.App {
 
   /**
@@ -86,16 +93,16 @@ class OpenAIApp extends Homey.App {
     this.interface = this.checkInterface(this.engine);
 
     this.imageEngine = this.homey.settings.get('imageEngine');
-    if (this.imageEngine === null) {
-      this.log('First time running so setting default imageEngine');
-      this.imageEngine = 'dall-e-2';
+    if (this.imageEngine === null || this.imageEngine.startsWith('dall-e-')) {
+      this.log('Selecting supported GPT Image model');
+      this.imageEngine = 'gpt-image-2.5-flare';
       this.homey.settings.set('imageEngine', this.imageEngine);
     }
 
     this.imageQuality = this.homey.settings.get('imageQuality');
-    if (this.imageQuality === null) {
-      this.log('First time running so setting default imageQuality');
-      this.imageQuality = 'standard';
+    if (this.imageQuality === null || this.imageQuality === 'standard' || this.imageQuality === 'hd') {
+      this.log('Selecting supported GPT Image quality');
+      this.imageQuality = this.imageQuality === 'hd' ? 'high' : 'medium';
       this.homey.settings.set('imageQuality', this.imageQuality);
     }
 
@@ -202,40 +209,7 @@ class OpenAIApp extends Homey.App {
 
     // Generate Image flowcard
     const generateImageAction = this.homey.flow.getActionCard('generate-an-image');
-    generateImageAction.registerRunListener(async (args, state) => {
-      this.log(`Generate image of size ${args.size} from text ${args.description}`);
-
-      // Start Image generation:
-      const size = Number.isFinite(+args.size) ? `${args.size}x${args.size}` : args.size;
-      const imageParams = {
-        model: this.imageEngine,
-        prompt: args.description,
-        n: 1,
-        size,
-        quality: this.imageQuality,
-      };
-      const response = await this.openai.images.generate(imageParams)
-/*        .catch((err) => {
-          this.log(`ERROR: ${err.status}`);
-          if (err.status === HTTP_STATUS.RATE_LIMIT) {
-            // Try again (only 1 image per 1 minute)
-            return sleep(6000)
-              .then(() => { this.log('igjen'); return this.openai.images.generate(imageParams); });
-          }
-          this.log('ugg');
-          return Promise.reject(err);
-        })*/;
-      const imageUrl = response.data[0].url;
-      this.log(`Got image: ${imageUrl}`);
-      this.__image = imageUrl;
-
-      const myImage = await this.homey.images.createImage();
-      myImage.setUrl(imageUrl);
-
-      return {
-        DALLE_Image: myImage,
-      };
-    });
+    generateImageAction.registerRunListener(async (args) => this.generateImage(args));
 
     // Start next partial answer
     const flushQueueAction = this.homey.flow.getActionCard('flush-queue');
@@ -253,7 +227,6 @@ class OpenAIApp extends Homey.App {
       deviceId: `${homeyId}`,
     };
     const webhook = `https://webhooks.athom.com/webhook/63c484ce5081010bae97f67e?homey=${homeyId}&message=something&flag=something`;
-    console.log(`Webhook address: ${webhook}`);
     this.homey.settings.set('webhook', webhook);
     let retryCount = 10;
     while (retryCount > 0 && webhookId != null) {
@@ -262,22 +235,17 @@ class OpenAIApp extends Homey.App {
 
         myWebhook.on('message', (args) => {
           this.log('Got a webhook message!');
-          this.log('headers:', args.headers);
-          this.log('query:', args.query);
 
           let message = '';
           let body = '';
           try {
             // In case the mime header got corrupted homey think's it's json and messes up the message
             body = (typeof args.body === 'string') ? args.body : JSON.stringify(args.body).replaceAll('\\n', '\n');
-            this.log(body);
             const list = body.split('\n');
-            let subject = '';
             let breaksFound = 0;
             let plainTextPart = false;
             let isBase64 = false;
             for (let i = 0; i < list.length; i++) {
-              if ((breaksFound === 0) && list[i].startsWith('Subject: ')) subject = list[i].substring(9);
               if (list[i].startsWith('Content-Type:')) {
                 if (list[i].includes('text/plain')) {
                   plainTextPart = true;
@@ -292,23 +260,18 @@ class OpenAIApp extends Homey.App {
               if (plainTextPart && breaksFound === 1) message += (isBase64 ? Buffer.from(list[i], 'base64').toString() : list[i]);
               breaksFound += list[i] === '';
             }
-            this.log('subject:', subject);
           } catch (err) {
             this.log('==== ERROR ====\n', err);
           }
           if (!message) message = args.query.message;
-          this.log('message:', message);
           if (message) {
             const flag = args.query.flag || '';
-            this.log(`Flag: ${flag}`);
             const webhookToken = {
               flag,
               message,
             };
             const webhookTrigger = this.homey.flow.getTriggerCard('webhook-triggered');
             webhookTrigger.trigger(webhookToken);
-          } else {
-            this.log('body', body);
           }
         });
         retryCount = 0;
@@ -360,6 +323,10 @@ class OpenAIApp extends Homey.App {
       Math.max(MIN_GPT5_MAX_COMPLETION_TOKENS, Math.floor(parsed)),
     );
     return clamped;
+  }
+
+  getSafetyIdentifier() {
+    return createHash('sha256').update(String(this.randomName)).digest('hex');
   }
 
   extractResponseText(response) {
@@ -415,19 +382,6 @@ class OpenAIApp extends Homey.App {
     return '';
   }
 
-  logLargeObject(prefix, object) {
-    try {
-      const json = JSON.stringify(object);
-      const chunkSize = 900;
-      for (let idx = 0; idx < json.length; idx += chunkSize) {
-        const chunk = json.substring(idx, idx + chunkSize);
-        this.log(`${prefix}${idx === 0 ? '' : ` (chunk ${Math.floor(idx / chunkSize) + 1})`}: ${chunk}`);
-      }
-    } catch (err) {
-      this.log(`${prefix}: [unserializable object: ${err}]`);
-    }
-  }
-
   async imageToDataUrl(image) {
     const imageStream = await image.getStream();
     const chunks = [];
@@ -442,6 +396,34 @@ class OpenAIApp extends Homey.App {
     const metadata = imageStream.meta || {};
     const contentType = metadata.contentType || imageStream.contentType || 'image/jpeg';
     return `data:${contentType};base64,${Buffer.concat(chunks).toString('base64')}`;
+  }
+
+  async generateImage({ size: requestedSize, description }) {
+    this.log(`Generating image with model=${this.imageEngine}, size=${requestedSize}`);
+    const legacySmallSize = requestedSize === '256' || requestedSize === '512';
+    if (legacySmallSize) this.log(`Image size ${requestedSize} is retired; using 1024x1024`);
+    let size = requestedSize;
+    if (legacySmallSize) size = '1024x1024';
+    else if (Number.isFinite(+requestedSize)) size = `${requestedSize}x${requestedSize}`;
+    const response = await this.openai.images.generate({
+      model: this.imageEngine,
+      prompt: description,
+      n: 1,
+      size,
+      quality: this.imageQuality,
+      output_format: 'jpeg',
+      output_compression: 80,
+    });
+    const encodedImage = response.data?.[0]?.b64_json;
+    if (!encodedImage) throw new Error('OpenAI returned no generated image data');
+    const imageData = Buffer.from(encodedImage, 'base64');
+    if (imageData.length > 5 * 1024 * 1024) {
+      throw new Error('Generated image exceeds the Homey 5 MB limit');
+    }
+    this.__image = `Generated image (${imageData.length} bytes)`;
+    const myImage = await this.homey.images.createImage();
+    myImage.setStream((stream) => stream.end(imageData));
+    return { DALLE_Image: myImage };
   }
 
   createUserMessageContent(question, imageUrl) {
@@ -496,7 +478,8 @@ class OpenAIApp extends Homey.App {
     let lengthExceeded = false;
     let timeExceeded = false;
     const isGPT5Engine = GPT5_MODELS.has(this.engine);
-    const effectiveTemperature = isGPT5Engine ? 1 : +this.temperature;
+    const isGPT6Engine = GPT6_MODELS.has(this.engine);
+    const effectiveTemperature = (isGPT5Engine || isGPT6Engine) ? 1 : +this.temperature;
     try {
       if (image && this.interface === INTERFACE.COMPLETION) {
         throw new Error('The selected OpenAI model does not support image input');
@@ -556,44 +539,24 @@ class OpenAIApp extends Homey.App {
           const completionParams = {
             model: this.engine,
             messages: requestMessages,
-            safety_identifier: this.randomName,
+            safety_identifier: this.getSafetyIdentifier(),
           };
           if (isGPT5Engine) {
             completionParams.max_completion_tokens = this.gpt5MaxCompletionTokens;
             if (GPT56_REASONING_EFFORT[this.engine]) {
               completionParams.reasoning_effort = GPT56_REASONING_EFFORT[this.engine];
-            } else {
-              completionParams.temperature = effectiveTemperature;
             }
+          } else if (isGPT6Engine) {
+            completionParams.max_completion_tokens = this.gpt5MaxCompletionTokens;
+            completionParams.reasoning_effort = GPT6_REASONING_EFFORT[this.engine];
           } else {
             completionParams.max_tokens = LEGACY_CHAT_MAX_TOKENS;
             completionParams.temperature = effectiveTemperature;
           }
 
-          this.log(`Calling chat.completions.create with model=${completionParams.model}, reasoning=${completionParams.reasoning_effort ?? 'default'}, temp=${completionParams.temperature ?? 'default'}, maxTokens=${completionParams.max_tokens ?? completionParams.max_completion_tokens}, messages=${completionParams.messages.length}`);
-
-          try {
-            const payloadPreview = JSON.stringify({
-              model: completionParams.model,
-              temperature: completionParams.temperature,
-              reasoning_effort: completionParams.reasoning_effort,
-              max_tokens: completionParams.max_tokens,
-              max_completion_tokens: completionParams.max_completion_tokens,
-              messages: completionParams.messages.map((msg) => ({
-                role: msg.role,
-                content: Array.isArray(msg.content)
-                  ? msg.content.map((part) => ({
-                    type: part.type,
-                    text: typeof part.text === 'string' ? part.text.slice(0, 200) : part.text,
-                    image_url: part.image_url ? { url: '[image]' } : undefined,
-                  }))
-                  : (typeof msg.content === 'string' ? msg.content.slice(0, 200) : msg.content),
-              })),
-            });
-            this.log(`chat.completions payload preview: ${payloadPreview}`);
-          } catch (err) {
-            this.log(`Unable to serialize chat.completions payload: ${err}`);
-          }
+          const endpoint = isGPT6Engine ? 'responses' : 'chat.completions';
+          const tokenLimit = completionParams.max_tokens ?? completionParams.max_completion_tokens;
+          this.log(`Calling ${endpoint}: model=${this.engine}, tokens=${tokenLimit}, messages=${completionParams.messages.length}`);
 
           if (this.chat.length > 0) {
             const lastUserMessage = [...this.chat].reverse().find((msg) => msg.role === 'user');
@@ -605,39 +568,62 @@ class OpenAIApp extends Homey.App {
             }
           }
 
-          completion = await this.openai.chat.completions.create(completionParams);
-          const choice = completion.choices[0];
-          if (choice?.message) {
-            if (isGPT5Engine && Array.isArray(choice.message.content)) {
-              responseText = choice.message.content
-                .map((part) => {
-                  if (typeof part === 'string') return part;
-                  if (part && typeof part.text === 'string') return part.text;
-                  return '';
-                })
-                .join('');
-            } else if (typeof choice.message.content === 'string') {
-              responseText = choice.message.content;
+          if (isGPT6Engine) {
+            const response = await this.openai.responses.create({
+              model: this.engine,
+              input: this.chat.map(({ role, content }) => ({
+                role,
+                content: Array.isArray(content)
+                  ? content.map((part) => {
+                    if (part.type === 'image_url') {
+                      return { type: 'input_image', image_url: part.image_url.url };
+                    }
+                    return { type: 'input_text', text: part.text };
+                  })
+                  : content,
+              })),
+              reasoning: { effort: GPT6_REASONING_EFFORT[this.engine] },
+              max_output_tokens: this.gpt5MaxCompletionTokens,
+              safety_identifier: this.getSafetyIdentifier(),
+              store: false,
+            });
+            responseText = this.extractResponseText(response);
+            if (response.status === 'incomplete') {
+              throw new Error(`OpenAI returned incomplete output: ${response.incomplete_details?.reason || 'unknown reason'}`);
             }
-          }
-          if (!responseText && choice && typeof choice.text === 'string') {
-            responseText = choice.text;
-          }
-          if (!responseText) {
-            this.logLargeObject('Chat completion raw choice', choice);
-          }
-          if (!responseText) {
-            if (isGPT5Engine) {
-              throw new Error('GPT-5 returned no assistant content before hitting the token limit');
+            if (response.status !== 'completed' || !responseText) {
+              throw new Error(`OpenAI returned ${response.status || 'no'} response without assistant text`);
             }
-          }
-          const assistantText = responseText || '';
-          if (assistantText) {
+            this.chat.push({ role: 'assistant', content: responseText });
+            this.log(`Responses result status=${response.status}, contentLength=${responseText.length}`);
+            finishReason = 'stop';
+          } else {
+            completion = await this.openai.chat.completions.create(completionParams);
+            const choice = completion.choices[0];
+            if (choice?.message) {
+              if (isGPT5Engine && Array.isArray(choice.message.content)) {
+                responseText = choice.message.content
+                  .map((part) => {
+                    if (typeof part === 'string') return part;
+                    if (part && typeof part.text === 'string') return part.text;
+                    return '';
+                  })
+                  .join('');
+              } else if (typeof choice.message.content === 'string') {
+                responseText = choice.message.content;
+              }
+            }
+            if (!responseText && choice && typeof choice.text === 'string') {
+              responseText = choice.text;
+            }
+            if (!responseText) {
+              throw new Error(`Chat completion returned no text, finish_reason=${choice?.finish_reason ?? 'unknown'}`);
+            }
             const answerRole = choice?.message?.role || 'assistant';
-            this.chat.push({ role: answerRole, content: assistantText });
+            this.chat.push({ role: answerRole, content: responseText });
+            this.log(`Chat completion finish_reason=${choice.finish_reason}, contentLength=${responseText.length}`);
+            finishReason = choice.finish_reason;
           }
-          this.log(`Chat completion finish_reason=${completion.choices[0].finish_reason}, contentLength=${responseText?.length ?? 0}`);
-          finishReason = completion.choices[0].finish_reason;
         }
 
         now = new Date();
@@ -676,7 +662,7 @@ class OpenAIApp extends Homey.App {
         const splitText = this.splitIntoSubstrings(response, this.homey.settings.get('split'));
         for (let idx = 0; idx < splitText.length; idx++) {
           await this.sendToken(splitText[idx].replace(/^(\.|\?| )+/gm, ''));
-          this.log(`Partial answer: ${splitText[idx]}`);
+          this.log(`Partial answer length: ${splitText[idx].length}`);
           this.prompt += splitText[idx];
           fullText += splitText[idx];
         }
@@ -693,7 +679,7 @@ class OpenAIApp extends Homey.App {
       }
       const completeToken = { ChatGPT_FullResponse: fullText };
       const completeTrigger = this.homey.flow.getTriggerCard('chatGPT-complete');
-      this.log(`Full answer: ${fullText}`);
+      this.log(`Full answer length: ${fullText.length}`);
       // this.log(`Token: ${this.prompt} ||| ${pendingText}`);
       await completeTrigger.trigger(completeToken);
       if (timeExceeded) throw new Error('Time limit exceeded');
@@ -704,8 +690,6 @@ class OpenAIApp extends Homey.App {
       this.log('Query resulted in error:');
       this.log(`  engine:      ${this.engine}`);
       this.log(`  temperature: ${this.temperature}`);
-      this.log(`  user:        ${this.randomName}`);
-      this.log(`  prompt: ${this.prompt + pendingText}`);
       this.log('Error text: ');
       this.log(`  ${err}`);
       await this.sendToken(errText);

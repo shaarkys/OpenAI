@@ -19,6 +19,10 @@
               "en": "gpt-5.6-luna"
             }
           },
+          { "id": "gpt-6-luna", "label": { "en": "gpt-6-luna" } },
+          { "id": "gpt-6-sol", "label": { "en": "gpt-6-sol" } },
+          { "id": "gpt-6.1-sol", "label": { "en": "gpt-6.1-sol" } },
+          { "id": "gpt-6-astra", "label": { "en": "gpt-6-astra" } },
           {
             "id": "gpt-5.6-terra",
             "label": {
@@ -113,7 +117,7 @@
           "en": "Temperature"
         },
         "hint": { 
-          "en": "Sampling temperature for models that support it. GPT-5 reasoning models use their default temperature."
+          "en": "Sampling temperature for models that support it. GPT-5 and GPT-6 reasoning models use their default temperature."
         },
         "value": 0.7,
         "min": 0.0,

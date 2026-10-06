@@ -8,8 +8,8 @@
     "no": "Lag et bilde med størrelse [[size]] fra teksten [[description]] og returner det"
   },
   "hint": {
-    "en": "Uses DALL·E to generate images according to your description.",
-    "no": "Bruk DALL·E for å generere bilder i henhold til den gitte beskrivelsen"
+    "en": "Uses GPT Image to generate images. Legacy 256 and 512 sizes generate 1024x1024 images.",
+    "no": "Bruker GPT Image til å generere bilder. Tidligere 256- og 512-størrelser genererer 1024x1024-bilder."
   },
   "args": [
     {
@@ -20,11 +20,11 @@
         "no": "Dimensjoner"
       },
       "values": [
-        { "id": "256", "label": { "en": "256x256 (DALL-E-2)" } },
-        { "id": "512", "label": { "en": "512x512 (DALL-E-2)" } },
+        { "id": "256", "label": { "en": "256x256 (legacy; outputs 1024x1024)" } },
+        { "id": "512", "label": { "en": "512x512 (legacy; outputs 1024x1024)" } },
         { "id": "1024", "label": { "en": "1024x1024" } },
-        { "id": "1024x1792", "label": { "en": "1024x1792 (DALL-E-3)" } },
-        { "id": "1792x1024", "label": { "en": "1792x1024 (DALL-E-3)" } }
+        { "id": "1024x1792", "label": { "en": "1024x1792" } },
+        { "id": "1792x1024", "label": { "en": "1792x1024" } }
       ]
     },
     {
@@ -41,8 +41,8 @@
       "name": "DALLE_Image",
       "type": "image",
       "title": {
-        "en": "DALL·E Image",
-        "no": "DALL·E Bilde"
+        "en": "Generated Image",
+        "no": "Generert bilde"
       },
       "example": {
         "en": "An image generated from the input text.",

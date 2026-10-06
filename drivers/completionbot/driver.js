@@ -1,7 +1,6 @@
 'use strict';
 
 const { Driver, Device } = require('homey');
-const { OpenAIApi } = require('openai');
 const { randomUUID } = require('crypto');
 
 /**
@@ -76,36 +75,31 @@ class CompletionBotDriver extends Driver {
    * @returns {{ completion: string }} The completion to the text in a completion token.
    */
   async sendCompletionRequest(prompt, settings) {
-    try {
-      let response = await this.getOpenAI().completions.create({
-        model: settings.model,
-        prompt: prompt,
-        temperature: +settings.temperature,
-        max_tokens: +settings.max_tokens,
-      });
-
-      let finish_reason = response.choices[0].finish_reason;
-      if (finish_reason === 'stop') {
-        let text = response.choices[0].text;
-        return { completion: text };
-      }
-      else if (finish_reason === 'length') {
-        throw new Error('OpenAI API returned incomplete model output due to max_tokens parameter or token limit');
-      }
-      else if (finish_reason === 'content_filter') {
-        throw new Error('OpenAI API returned incomplete model output due to a flag from content filters');
-      }
-      else {
-        // Note: finish_reason === null is a valid case when doing streaming.
-        throw new Error('OpenAI API returned incomplete model output due to unknown reason');
-      }
-    } catch (error) {
-      throw error;
+    const retiredModels = new Set(['gpt-3.5-turbo-instruct', 'davinci-002', 'babbage-002', 'babbage']);
+    const model = retiredModels.has(settings.model) ? 'gpt-6-luna' : settings.model;
+    if (model !== settings.model) {
+      this.warn(`CompletionBot model ${settings.model} was retired; using ${model}`);
     }
+    const effort = ['gpt-6-astra', 'gpt-6.1-sol'].includes(model) ? 'medium' : 'none';
+    const response = await this.getOpenAI().responses.create({
+      model,
+      input: prompt,
+      reasoning: { effort },
+      max_output_tokens: +settings.max_tokens,
+      store: false,
+    });
+    if (response.status === 'incomplete') {
+      throw new Error(`OpenAI returned incomplete output: ${response.incomplete_details?.reason || 'unknown reason'}`);
+    }
+    const completion = this.homey.app.extractResponseText(response);
+    if (response.status !== 'completed' || !completion) {
+      throw new Error(`OpenAI returned ${response.status || 'no'} response without assistant text`);
+    }
+    return { completion };
   }
 
   /**
-   * @returns {OpenAIApi} The OpenAI API instance.
+   * @returns {OpenAI} The OpenAI API instance.
    */
   getOpenAI() {
     return this.homey.app.openai;

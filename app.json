@@ -362,8 +362,8 @@
           "no": "Lag et bilde med størrelse [[size]] fra teksten [[description]] og returner det"
         },
         "hint": {
-          "en": "Uses DALL·E to generate images according to your description.",
-          "no": "Bruk DALL·E for å generere bilder i henhold til den gitte beskrivelsen"
+          "en": "Uses GPT Image to generate images. Legacy 256 and 512 sizes generate 1024x1024 images.",
+          "no": "Bruker GPT Image til å generere bilder. Tidligere 256- og 512-størrelser genererer 1024x1024-bilder."
         },
         "args": [
           {
@@ -377,13 +377,13 @@
               {
                 "id": "256",
                 "label": {
-                  "en": "256x256 (DALL-E-2)"
+                  "en": "256x256 (legacy; outputs 1024x1024)"
                 }
               },
               {
                 "id": "512",
                 "label": {
-                  "en": "512x512 (DALL-E-2)"
+                  "en": "512x512 (legacy; outputs 1024x1024)"
                 }
               },
               {
@@ -395,13 +395,13 @@
               {
                 "id": "1024x1792",
                 "label": {
-                  "en": "1024x1792 (DALL-E-3)"
+                  "en": "1024x1792"
                 }
               },
               {
                 "id": "1792x1024",
                 "label": {
-                  "en": "1792x1024 (DALL-E-3)"
+                  "en": "1792x1024"
                 }
               }
             ]
@@ -420,8 +420,8 @@
             "name": "DALLE_Image",
             "type": "image",
             "title": {
-              "en": "DALL·E Image",
-              "no": "DALL·E Bilde"
+              "en": "Generated Image",
+              "no": "Generert bilde"
             },
             "example": {
               "en": "An image generated from the input text.",
@@ -571,6 +571,30 @@
                   }
                 },
                 {
+                  "id": "gpt-6-luna",
+                  "label": {
+                    "en": "gpt-6-luna"
+                  }
+                },
+                {
+                  "id": "gpt-6-sol",
+                  "label": {
+                    "en": "gpt-6-sol"
+                  }
+                },
+                {
+                  "id": "gpt-6.1-sol",
+                  "label": {
+                    "en": "gpt-6.1-sol"
+                  }
+                },
+                {
+                  "id": "gpt-6-astra",
+                  "label": {
+                    "en": "gpt-6-astra"
+                  }
+                },
+                {
                   "id": "gpt-5.6-terra",
                   "label": {
                     "en": "gpt-5.6-terra"
@@ -664,7 +688,7 @@
                 "en": "Temperature"
               },
               "hint": {
-                "en": "Sampling temperature for models that support it. GPT-5 reasoning models use their default temperature."
+                "en": "Sampling temperature for models that support it. GPT-5 and GPT-6 reasoning models use their default temperature."
               },
               "value": 0.7,
               "min": 0,
@@ -763,24 +787,30 @@
               "label": {
                 "en": "Model"
               },
-              "value": "gpt-3.5-turbo-instruct",
+              "value": "gpt-6-luna",
               "values": [
                 {
-                  "id": "gpt-3.5-turbo-instruct",
+                  "id": "gpt-6-luna",
                   "label": {
-                    "en": "gpt-3.5-turbo-instruct"
+                    "en": "gpt-6-luna"
                   }
                 },
                 {
-                  "id": "davinci-002",
+                  "id": "gpt-6-sol",
                   "label": {
-                    "en": "davinci-002"
+                    "en": "gpt-6-sol"
                   }
                 },
                 {
-                  "id": "babbage",
+                  "id": "gpt-6.1-sol",
                   "label": {
-                    "en": "babbage-002"
+                    "en": "gpt-6.1-sol"
+                  }
+                },
+                {
+                  "id": "gpt-6-astra",
+                  "label": {
+                    "en": "gpt-6-astra"
                   }
                 }
               ]
@@ -792,7 +822,7 @@
                 "en": "Max Token Limit"
               },
               "hint": {
-                "en": "The maximum number of tokens allowed for the generated answer. By default, the number of tokens the model can return will be (2049 - prompt tokens)"
+                "en": "Maximum output tokens, including reasoning tokens."
               },
               "value": 2049,
               "min": 20,
@@ -805,7 +835,7 @@
                 "en": "Temperature"
               },
               "hint": {
-                "en": "Defines the creativity of the responses. 0.0 is deterministic, 1.0 is the most creative."
+                "en": "Legacy setting retained for existing devices; GPT-6 models use their supported reasoning settings instead."
               },
               "value": 0.7,
               "min": 0,
